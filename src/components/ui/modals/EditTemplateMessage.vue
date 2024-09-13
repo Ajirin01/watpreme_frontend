@@ -209,6 +209,8 @@
     import { mapState, mapActions } from 'vuex';
     import { required, maxLength } from 'vuelidate/lib/validators';
     import whatsappTransformData from '@/utils/whatsappTransformData'
+    import {API_HOST} from '@/constants/apiHost';
+
     
     import axios from "axios";
 
@@ -216,8 +218,8 @@
     export default {
         data() {
             return {
-                API_BASE_URL: 'http://localhost:8000/api/',
-                MEDIA_BASE_URL: 'http://localhost:8000',
+                API_BASE_URL: `${API_HOST}/api/`,
+                MEDIA_BASE_URL: `${API_HOST}`,
                 ctaType: 'URL',
                 websiteUrl: '',
                 displayText: '',

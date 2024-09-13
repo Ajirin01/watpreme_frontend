@@ -4,7 +4,7 @@
       <!-- Row 1 -->
       <div class="row avaliabilty">
         <div class="col-md-6 d-flex align-items-center justify-content-left">
-          <div class="circle-text"><b>{{ selectedContact.name[0] }}</b></div>
+          <div class="circle-text"><b v-if="selectedContact">{{ selectedContact.name[0] }}</b></div>
           <div class="status-circle"></div>
           <div class="status-label">Available</div>
         </div>
@@ -52,6 +52,7 @@
 <script>
 import axios from 'axios';
 import CustomTags from '@/components/ui/CustomTags.vue';
+import {API_HOST} from '@/constants/apiHost';
 import { mapState, mapMutations } from 'vuex';
 
 export default {
@@ -88,7 +89,7 @@ export default {
     async loadMessages(chatId) {
       this.chatMessages = [];
       try {
-        const response = await axios.get(`http://localhost:8000/api/conversations/${chatId}`);
+        const response = await axios.get(`${API_HOST}/api/conversations/${chatId}`);
         this.chatMessages = response.data;
         if (this.chatMessages.contact) {
           this.setSelectedContact(this.chatMessages.contact);

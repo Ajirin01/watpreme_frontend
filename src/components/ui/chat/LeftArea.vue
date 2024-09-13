@@ -90,7 +90,7 @@
 <script>
 import axios from 'axios';
 import { mapActions } from 'vuex';
-
+import {API_HOST} from '@/constants/apiHost';
 export default {
   data() {
     return {
@@ -139,7 +139,7 @@ export default {
       console.log("Apply filter")
     },
     fetchChats() {
-      axios.get('http://localhost:8000/api/conversations')
+      axios.get(`${API_HOST}/api/conversations`)
         .then(response => {
           this.chats = response.data.map(conversation => ({
             ...conversation,
@@ -151,7 +151,7 @@ export default {
         });
     },
     fetchContacts() {
-      axios.get('http://localhost:8000/api/contacts')
+      axios.get(`${API_HOST}/api/contacts`)
         .then(response => {
           this.contacts = response.data;
         })

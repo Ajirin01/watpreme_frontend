@@ -1,7 +1,9 @@
 import axios from "axios";
+import {API_HOST} from '@/constants/apiHost';
+
 
 // api calls start here
-const BASE_URL = "http://localhost:8000/api/";
+const BASE_URL = `${API_HOST}/api/`;
 // Contacts
 export const fetchContactsAction = ({ commit }) => {
   // Make an HTTP GET request to fetch contacts

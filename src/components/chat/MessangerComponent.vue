@@ -17,6 +17,8 @@ import axios from 'axios';
 import ChatInput from "@/components/chat/ChatInput.vue";
 import MessageDisplay from "@/components/chat/MessageDisplay.vue";
 import Pusher from 'pusher-js';
+import {API_HOST} from '@/constants/apiHost';
+
 
 export default {
   props: {
@@ -61,7 +63,7 @@ export default {
       this.chatMessages = []
       this.currentChatId = chatId;
       try {
-        const response = await axios.get(`http://localhost:8000/api/conversations/${chatId}/messages`);
+        const response = await axios.get(`${API_HOST}/api/conversations/${chatId}/messages`);
         this.chatMessages = response.data;
         this.messageKey += 1; // Update key to force re-render
       } catch (error) {
@@ -92,7 +94,7 @@ export default {
 
       // Send the message to the backend
       try {
-        await axios.post(`http://localhost:8000/api/conversations/${this.currentChatId}/messages`, userText);
+        await axios.post(`${API_HOST}/api/conversations/${this.currentChatId}/messages`, userText);
         userText.status = 'sent'; // Update status to 'sent' on success
       } catch (error) {
         userText.status = 'failed'; // Update status to 'failed' on error
@@ -139,7 +141,7 @@ export default {
 
         try {
           // Save the incoming message to the database
-          await axios.post(`http://localhost:8000/api/conversations/${this.currentChatId}/webhook/messages`, userText);
+          await axios.post(`${API_HOST}/api/conversations/${this.currentChatId}/webhook/messages`, userText);
 
           // If saving to the database is successful, update the UI
           if (data.message) {
