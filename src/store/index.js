@@ -7,6 +7,7 @@ import {
   setCustomAttributes,
   addContact,
   addTag,
+  addBroadcast,
   addTeam,
   deleteTeam,
   addOperator,
@@ -32,6 +33,7 @@ import {
   updateTopic,
   deleteTopic,
   setSelectedTopic,
+  deleteBroadcastMetrics,
   setTopics,
   setBusiness,
   setBroadcasts,
@@ -47,7 +49,9 @@ import {
   setSelectedOperator,
   setBroadcastAddableContacts,
   setBroadcastSelectedTemplate,
-  setSelectedTemplateTextContent
+  setSelectedTemplateTextContent,
+
+  setBroadcastMetrics,
 
 } from "@/store/mutations";
 
@@ -61,6 +65,7 @@ import {
   fetchTeamAction,
   fetchOperatorsAction,
   fetchBroadcastsAction,
+  fetchBroadcastMetricsAction,
 
   postContactAction,
   postBusinessAction,
@@ -70,6 +75,7 @@ import {
   postContactAttributeAction,
   postOperatorAction,
   postTeamAction,
+  postBroadcastAction,
   
   updateBusinessAction,
   updateBusinessProfileAction,
@@ -87,6 +93,7 @@ import {
   deleteOperatorAction,
   deleteTeamAction,
   deleteBroadcastRecipientsAction,
+  deleteBroadcastMetricsAction,
   // api calls end here
 
   addContactAction,
@@ -143,6 +150,7 @@ export default new Vuex.Store({
     broadcastSelectedTemplate: {},
     selectedTemplatetTextContent: {},
     
+    metrics: {},
 
     selectedContact: {},
     selectedAttribute: {},
@@ -187,6 +195,7 @@ export default new Vuex.Store({
     setCustomAttributes,
     setBroadcastRecipients,
     setBroadcastAddableContacts,
+    setBroadcastMetrics,
 
     updateContact,
     updateContactAttribute,
@@ -204,6 +213,7 @@ export default new Vuex.Store({
     addTopic,
     addTeam,
     addOperator,
+    addBroadcast,
 
     removeTag,
     
@@ -214,13 +224,15 @@ export default new Vuex.Store({
     deleteTopic,
     deleteTeam,
     deleteOperator,
-    deleteBroadcastRecipients
+    deleteBroadcastRecipients,
+    deleteBroadcastMetrics,
   },
   actions: {
     // api calls start here
     // Contacts
     fetchContacts: fetchContactsAction,
     postContact: postContactAction,
+    postBroadcast: postBroadcastAction,
     deleteContact: deleteContactAction,
     updateContact: updateContactAction,
     postContactAttribute: postContactAttributeAction,
@@ -279,6 +291,9 @@ export default new Vuex.Store({
     deleteBroadcastRecipients: deleteBroadcastRecipientsAction,
     setBroadcastAddableContacts: setBroadcastAddableRecipientsAction,
     setBroadcastSelectedTemplate: setBroadcastSelectedTemplateAction,
-    setSelectedTemplateTextContent: setSelectedTemplateTextContentAction
+    setSelectedTemplateTextContent: setSelectedTemplateTextContentAction,
+
+    setBroadcastMetrics: fetchBroadcastMetricsAction,
+    deleteBroadcastMetrics: deleteBroadcastMetricsAction
   },
 });

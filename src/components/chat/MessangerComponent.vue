@@ -2,7 +2,7 @@
   <div id="app">
     <!-- Message container for displaying chat messages -->
     <div class="message-container" ref="messageContainer">
-      <MessageDisplay :messages="chatMessages" :key="messageKey"/>
+      <MessageDisplay :messages="chatMessages" :key="messageKey" :userId="1"/>
     </div>
 
     <!-- User input area -->
@@ -13,17 +13,23 @@
 </template>
 
 <script>
+import axios from 'axios';
 import ChatInput from "@/components/chat/ChatInput.vue";
 import MessageDisplay from "@/components/chat/MessageDisplay.vue";
-import chatData from "@/assets/chatData.json";
+import Pusher from 'pusher-js';
 
 export default {
+  props: {
+    chatId: {
+      type: Number,
+      default: null
+    }
+  },
   data() {
     return {
       chatMessages: [],  // Array to store chat messages
-      currentMessageId: null,  // Current message ID being processed
-      messageKey: 0,         // Key for re-rendering MessageDisplay component
-      end: false,
+      currentChatId: null,  // Current chat ID being processed
+      messageKey: 0,  // Key for re-rendering MessageDisplay component
     };
   },
   watch: {
@@ -31,6 +37,13 @@ export default {
     chatMessages() {
       this.$nextTick(this.scrollToBottom);
     },
+    // Watch for changes in the route parameter and load messages
+    chatId: {
+      immediate: true,
+      handler(newChatId) {
+        this.loadMessages(newChatId);
+      }
+    }
   },
   methods: {
     // Scroll to the bottom of the message container
@@ -43,185 +56,102 @@ export default {
       });
     },
 
-    // Simulate delay before displaying bot response
-    sendDelayedMessage(chatMessages, botResponse) {
-      // Display "typing" message
-      chatMessages.push({ id: 'typing', type: 'typing', text: 'Bot is typing...', style: { fontStyle: 'italic' } });
-      this.scrollToBottom();
-
-      setTimeout(() => {
-        // Remove "typing" message
-        const typingIndex = chatMessages.findIndex((msg) => msg.id === 'typing');
-        if (typingIndex !== -1) {
-          chatMessages.splice(typingIndex, 1);
-        }
-
-        // Display bot response
-        chatMessages.push(botResponse);
-        this.scrollToBottom();
-      }, 1000);
-    },
-
-    // Recursively find a message by ID in the chat data
-    findMessageByIdRecursive(data, messageId) {
-      for (const message of data) {
-        if (message.id === messageId) {
-          // If id is parent id
-          return message;
-        } else if (message.conditions && message.conditions.length > 0) {
-          // If conditions are present 
-          const nestedResult = this.findMessageByIdRecursive(message.conditions, messageId);
-          if (nestedResult) {
-            return nestedResult;
-          }
-        } else if (message.content) {
-          if (message.content.id === messageId) {// if ID it's found in the content object of the parent instead i.e message > content
-            return message.content;
-          } else if (message.content.id !== messageId && message.content.conditions.length > 0) {// if ID it's found in the conditions object of content of the parent instead i.e message > content > conditions
-            const nestedResult = this.findMessageByIdRecursive(message.content.conditions, messageId);
-            if (nestedResult) {
-              return nestedResult;
-            }
-          } else if (message.content.next && message.content.next.conditions) {// if ID it's found in the conditions object of next of content of the parent instead i.e message > content > next > conditions
-            // If conditions are present in the next property of content, recursively search within them
-            if (message.content.next.id === messageId) {
-              return message.content.next;
-            } else if (message.content.next.conditions && message.content.next.conditions.length > 0) {
-              const nestedResult = this.findMessageByIdRecursive(message.content.next.conditions, messageId);
-              if (nestedResult) {
-                return nestedResult;
-              }
-            }
-          }
-        }
+    // Load messages for the selected chat
+    async loadMessages(chatId) {
+      this.chatMessages = []
+      this.currentChatId = chatId;
+      try {
+        const response = await axios.get(`http://localhost:8000/api/conversations/${chatId}/messages`);
+        this.chatMessages = response.data;
+        this.messageKey += 1; // Update key to force re-render
+      } catch (error) {
+        console.error('Failed to fetch chat messages:', error);
       }
-      return null;
-    },
-
-    // Recursively find a message by ID in the chat data
-    findMessageByStartRecursive(data) {
-      for (const message of data) {
-        if (message.starts) {
-          // If id is parent id
-          return message;
-        } else if (message.conditions && message.conditions.length > 0) {
-          // If conditions are present 
-          const nestedResult = this.findMessageByStartRecursive(message.conditions);
-          if (nestedResult) {
-            return nestedResult;
-          }
-        } else if (message.content) {
-          if (message.content.starts) {// if ID it's found in the content object of the parent instead i.e message > content
-            return message.content;
-          } else if (!message.content.starts && message.content.conditions.length > 0) {// if ID it's found in the conditions object of content of the parent instead i.e message > content > conditions
-            const nestedResult = this.findMessageByStartRecursive(message.content.conditions);
-            if (nestedResult) {
-              return nestedResult;
-            }
-          } else if (message.content.next && message.content.next.conditions) {// if ID it's found in the conditions object of next of content of the parent instead i.e message > content > next > conditions
-            // If conditions are present in the next property of content, recursively search within them
-            if (message.content.next.starts) {
-              return message.content.next;
-            } else if (message.content.next.conditions && message.content.next.conditions.length > 0) {
-              const nestedResult = this.findMessageByStartRecursive(message.content.next.conditions);
-              if (nestedResult) {
-                return nestedResult;
-              }
-            }
-          }
-        }
-      }
-      return null;
     },
 
     // Handle user's input message
-    handleUserMessage(userInput) {
-      console.clear();
-
+    async handleUserMessage(userInput) {
       // Create a user text message and add it to chatMessages
-      const userText = { id: 'user', type: 'text', text: `${userInput}` };
+      const userText = {
+          id: this.chatMessages.length + 1,
+          message: `${userInput}`,
+          sender: {
+              type: "operator",
+              id: 1
+          },
+          receiver: {
+              type: "user",
+              id: 2
+          },
+          status: 'sending', 
+          created_at: Date.now()
+      };
+
       this.chatMessages.push(userText);
       this.scrollToBottom();
 
-      // Find the current message in chatData based on the currentMessageId
-      const currentMessage = this.findMessageByIdRecursive(chatData, this.currentMessageId);
-      console.log(currentMessage);
-
-      // check if the message is ending message so that we can start from the beginning
-      if(currentMessage.ends){
-        this.sendDelayedMessage(this.chatMessages, this.findMessageByIdRecursive(chatData, 1))
-        this.currentMessageId = 1
-      }
-
-      // Process conditional messages
-      if (currentMessage != null && currentMessage.conditions.length > 0) {
-        const optionIndex = parseInt(userInput, 10);
-
-        if (Number.isInteger(optionIndex) && optionIndex >= 1 && optionIndex <= currentMessage.options.length) {
-          const option = currentMessage.options[optionIndex - 1];
-          const targetOption = option;
-
-          // Find the next message based on the selected option
-          const nextMessage = currentMessage.conditions.find((condition) => condition.selectedOption === targetOption);
-
-          if (nextMessage.content) {
-            // Update currentMessageId to the next content ID
-            this.currentMessageId = nextMessage.content.id;
-            if(currentMessage.ends){
-              this.currentMessageId = 1
-            }
-          }
-
-          // Check for rerun and send the appropriate delayed message
-          if (nextMessage.content && nextMessage.content.rerun != null) {
-            // console.log("nextMessage.content.rerun", nextMessage.content.rerun);
-            const rerunMessage = this.findMessageByIdRecursive(chatData, nextMessage.content.rerun);
-            this.currentMessageId = rerunMessage.id;
-            if(currentMessage.ends){
-              this.currentMessageId = 1
-            }
-            this.sendDelayedMessage(this.chatMessages, rerunMessage);
-          } else if (currentMessage.content && currentMessage.content.next?.conditions?.length > 0) {
-            console.log("nextMessage.content.next.conditions", currentMessage.content);
-            if(currentMessage.ends){
-              this.currentMessageId = 1
-            }
-            this.sendDelayedMessage(this.chatMessages, currentMessage.content);
-            this.currentMessageId = currentMessage.content.next.id;
-          } else {
-            if(currentMessage.ends){
-              this.currentMessageId = 1
-            }
-            this.sendDelayedMessage(this.chatMessages, nextMessage.content);
-          }
-        }else{
-          const errorMessage = { id: 'bot', type: 'text', text: 'Please enter a valid number option' };
-          if(currentMessage.ends){
-            this.currentMessageId = 1
-          }
-          this.sendDelayedMessage(this.chatMessages, errorMessage);
-        }
-      }
-
-      // Process ordinary text messages
-      if (currentMessage != null && Object.keys(currentMessage.next).length !== 0 && currentMessage.conditions.length === 0) {
-        // console.log("this is a next message is: ", currentMessage.next);
-        this.currentMessageId = currentMessage.next.id;
-        this.sendDelayedMessage(this.chatMessages, currentMessage.next);
-
-        if(currentMessage.ends){
-          this.currentMessageId = 1
-        }
+      // Send the message to the backend
+      try {
+        await axios.post(`http://localhost:8000/api/conversations/${this.currentChatId}/messages`, userText);
+        userText.status = 'sent'; // Update status to 'sent' on success
+      } catch (error) {
+        userText.status = 'failed'; // Update status to 'failed' on error
+        console.error('Failed to send message:', error);
       }
     }
+  },
+  computed: {
 
   },
   mounted() {
-    // Initialize chat with the first message from chatData
-    // const firstMessage = chatData.find((msg) => msg.id == this.currentMessageId);
-    const firstMessage =  this.findMessageByStartRecursive(chatData);
-    this.sendDelayedMessage(this.chatMessages, firstMessage);
-    this.currentMessageId = firstMessage.id;
+    // Load messages for the initial chat
+    // console.log(this.chatId, "@@@@@@@@@@@@@@")
+    this.loadMessages(this.chatId); // Assuming 1 is the initial chat ID, adjust as necessary
+
+    // Pusher configuration
+    Pusher.logToConsole = true;
+    const pusher = new Pusher('8c7fd270f7eb75c0f6e1', {
+      cluster: 'eu',
+      encrypted: true
+    });
+
+    const channel = pusher.subscribe('whatsapp-events');
+    channel.bind('message-received', async (data) => {
+      const messageText = data.message?.messages?.[0]?.text?.body ?? '';
+
+      if (messageText) {
+        const userText = {
+          id: this.chatMessages.length + 1,
+          contact_id: 1,
+          business_id: 1,
+          message: messageText,
+          sender: {
+            type: 'user', // Assuming 'user' is the correct type for received messages
+            id: data.message?.messages?.[0]?.from ?? 'unknown', // Use the sender's ID from the message or 'unknown'
+          },
+          receiver: {
+            type: 'operator',
+            id: 1, // Assuming the operator's ID is 1
+          },
+          status: 'received',
+          created_at: Date.now(),
+        };
+
+        try {
+          // Save the incoming message to the database
+          await axios.post(`http://localhost:8000/api/conversations/${this.currentChatId}/webhook/messages`, userText);
+
+          // If saving to the database is successful, update the UI
+          if (data.message) {
+            this.chatMessages.push(userText);
+            this.scrollToBottom();
+          }
+        } catch (error) {
+          console.error('Failed to save incoming message:', error);
+        }
+      }
+    });
+
   },
   components: {
     ChatInput,
@@ -236,7 +166,7 @@ export default {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding-top: 20px
+  padding-top: 20px;
 }
 
 .row {
@@ -264,7 +194,6 @@ export default {
   background-color: #888;  /* Color of the scrollbar thumb */
   border-radius: 4px;  /* Round corners of the thumb */
 }
-
 
 .user-message {
   background-color: #dcf8c6;

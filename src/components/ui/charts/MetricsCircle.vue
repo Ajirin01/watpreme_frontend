@@ -1,11 +1,11 @@
 <template>
     <div>
         <div class="circular-progress">
-        <div class="progress-bar">
-            <div class="unprogress" :style="unprogressStyle"></div>
-            <div class="progress" :style="progressStyle"></div>
-            <div class="percentage">{{ animatedProgress }}%</div>
-        </div>
+          <div class="progress-bar">
+              <div class="unprogress" :style="unprogressStyle"></div>
+              <div class="progress" :style="progressStyle"></div>
+              <div class="percentage">{{ animatedProgress }}%</div>
+          </div>
         </div>
     </div>
     

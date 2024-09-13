@@ -232,8 +232,16 @@ export const setBroadcastRecipients = (state, recipients) => {
   state.broadcastRecipients = recipients;
 };
 
+export const setBroadcastMetrics = (state, metrics) => {
+  state.metrics = metrics;
+};
+
 export const deleteBroadcastRecipients = (state, recipients) => {
   state.broadcastRecipients = recipients;
+};
+
+export const deleteBroadcastMetrics = (state) => {
+  state.metrics = {};
 };
 
 // remove mutations

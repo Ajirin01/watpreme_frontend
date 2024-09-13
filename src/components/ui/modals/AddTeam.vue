@@ -33,7 +33,7 @@ export default {
         size: 0,
         business_id: 1
         // Reset other fields related to team information here
-      }
+    }
     };
   },
   methods: {

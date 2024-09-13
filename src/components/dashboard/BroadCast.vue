@@ -335,10 +335,6 @@
     .add-template-btn:hover{
         background-color: rgba(128, 128, 128, 0.071);
     }
-    .links{
-        background-color: white;
-        border-radius: 5px
-    }
 
     .table-area{
         background-color: white;

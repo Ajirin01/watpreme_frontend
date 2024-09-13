@@ -121,7 +121,7 @@ export default {
 }
 
 .whatsapp-interface{
-  margin-top: -5px;
+  margin-top: -33px;
   width: 100vw;
   margin-left: -20px;
 }

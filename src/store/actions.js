@@ -659,6 +659,25 @@ export const deleteBroadcastAction = ({ commit }, id) => {
     });
 };
 
+//Messages Template
+export const fetchBroadcastMetricsAction = ({ commit }, broadcastId) => {
+  // Make an HTTP GET request to fetch contacts
+  axios
+    .get(BASE_URL + `broadcast/${broadcastId}/metrics`)
+    .then((response) => {
+      console.log(response.data);
+      // If the request is successful, commit the contacts to the store
+      commit("setBroadcastMetrics", response.data);
+    })
+    .catch((error) => {
+      // Handle errors, e.g., log them or show an error message
+      console.error("Error fetching contacts:", error);
+    });
+};
+export const deleteBroadcastMetricsAction = ({ commit }) => {
+  commit("deleteBroadcastMetrics");
+};
+
 // api calls end here
 
 export const addContactAction = ({ commit }, contact) => {
@@ -677,6 +696,7 @@ export const removeTagsAction = ({ commit }, tag) => {
 };
 
 export const setSelectedContactAction = ({ commit }, contact) => {
+  console.log("@@@@@@@@@@", contact)
   commit("setSelectedContact", contact);
 };
 

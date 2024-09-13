@@ -8,6 +8,7 @@ import ContactsManagerView from "@/views/ContactsManagerView.vue";
 import BroadcastView from "@/views/BroadcastView.vue";
 import BroadcastMetrics from "@/components/dashboard/BroadcastMetrics"
 import BroadcastListView from "@/views/BroadcastListView.vue";
+import ConversationChat from  "@/components/dashboard/ConversationChat";
 
 
 Vue.use(VueRouter);
@@ -77,6 +78,11 @@ const routes = [
     path: "/broadcast-metrics/:id",
     name: "broadcast-metrics",
     component: BroadcastMetrics,
+  },
+  {
+    path: "/chat/:id",
+    name: "chat",
+    component: ConversationChat,
   },
 ];
 

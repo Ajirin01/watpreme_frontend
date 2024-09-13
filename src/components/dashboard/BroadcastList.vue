@@ -1,127 +1,148 @@
 <template>
-  <div class="broadcasts-table-container">
-    <!-- Search input and Add New Broadcast button -->
-    <div class="search-and-add">
-      <!-- Search input -->
-      <div class="input-field search-input">
-        <b-input-group size="sm" class="mb-2">
-          <b-input-group-prepend is-text>
-            <b-icon icon="search"></b-icon>
-          </b-input-group-prepend>
-          <b-form-input type="search" v-model="searchQuery" placeholder="Search terms"></b-form-input>
-        </b-input-group>
+  <div>
+    <div class="row">
+      <!-- Column for the broadcast links -->
+      <div class="col-md-3">
+        <div class="links">
+            <b-card-header header-tag="nav">
+                <b-nav card-header tabs style="margin-bottom: 10px;">
+                  <b-nav-item to="/broadcast" exact exact-active-class="active"><b-icon icon="broadcast"></b-icon> Template Messages </b-nav-item>
+                  <b-nav-item to="/broadcast-history" exact exact-active-class="active"> <b-icon icon="grid-fill"></b-icon>Broadcast History</b-nav-item>
+                </b-nav>
+            </b-card-header>
+        </div>
       </div>
-      <div class="d-flex align-items-center justify-content-right import-options">
-        <!-- Modal Trigger -->
-        <button type="button" class="btn btn-primary add-broadcast-btn" v-b-modal.modal-addBroadcastModal>
-          <b-icon-envelope-fill></b-icon-envelope-fill> CREATE <span class="table-name">BROADCAST</span>
-        </button>
-
-        <div class="ml-2">
-          <b-button variant="outline-success" class="icon-button ml-2" @click="exportBroadcasts">
-            <b-icon icon="download" variant="success"></b-icon>
-          </b-button>
-          <b-button variant="outline-success" class="icon-button ml-2" @click="openFileInput">
-            <b-icon icon="upload" variant="success"></b-icon>
-          </b-button>
-          <!-- Hidden file input -->
-          <input type="file" ref="fileInput" style="display: none" @change="importBroadcasts">
+      <div classs="col-md-9">
+        <div class="broadcasts-table-container">
+          <div class="search-and-add">
+            <!-- Search input -->
+            <div class="input-field search-input">
+              <b-input-group size="sm" class="mb-2">
+                <b-input-group-prepend is-text>
+                  <b-icon icon="search"></b-icon>
+                </b-input-group-prepend>
+                <b-form-input type="search" v-model="searchQuery" placeholder="Search terms"></b-form-input>
+              </b-input-group>
+            </div>
+            <div class="d-flex align-items-center justify-content-right import-options">
+              <!-- Modal Trigger -->
+              <button type="button" class="btn btn-primary add-broadcast-btn" v-b-modal.modal-addBroadcastModal>
+                <b-icon-envelope-fill></b-icon-envelope-fill> CREATE <span class="table-name">BROADCAST</span>
+              </button>
+      
+              <div class="ml-2">
+                <b-button variant="outline-success" class="icon-button ml-2" @click="exportBroadcasts">
+                  <b-icon icon="download" variant="success"></b-icon>
+                </b-button>
+                <b-button variant="outline-success" class="icon-button ml-2" @click="openFileInput">
+                  <b-icon icon="upload" variant="success"></b-icon>
+                </b-button>
+                <!-- Hidden file input -->
+                <input type="file" ref="fileInput" style="display: none" @change="importBroadcasts">
+              </div>
+            </div>
+          </div>
+      
+          <div>
+            <b-table striped hover :items="paginatedBroadcasts" :fields="fields" responsive>
+              <!-- Checkbox column -->
+              <template #cell(check)="data">
+                <input type="checkbox" v-model="selectedBroadcasts" :value="data.item.id" />
+              </template>
+      
+              <!-- Broadcast Name column -->
+              <template #cell(broadcast-name)="data">
+                {{ data.item.name }}
+              </template>
+      
+              <!-- Channel column -->
+              <template #cell(channel)="data">
+                {{ data.item.channel }}
+              </template>
+      
+              <!-- Recipients column -->
+              <template #cell(recipients)="data">
+                <div class="recipient-container">
+                    <div class="recipient1"></div>
+                    <div class="recipient2"></div>
+                    <div class="recipient3">{{ data.item.recipients.length }}</div>
+                </div>
+                
+                
+              </template>
+      
+              <!-- Status column -->
+              <template #cell(status)="data">
+                {{ data.item.status }}
+              </template>
+      
+              <!-- Sent Date column -->
+              <template #cell(sent-date)="data">
+                {{ data.item.sent_date }}
+              </template>
+      
+              <!-- Dropdown column -->
+              <template #cell(dropdown)="data">
+                <b-dropdown size="lg" variant="link" toggle-class="text-decoration-none" no-caret>
+                  <template #button-content>
+                    <b-icon icon="three-dots-vertical"></b-icon>
+                  </template>
+                  
+                  
+                  <b-dropdown-item>
+                    <router-link :to="'/broadcast-metrics/' + data.item.id" class="text-dark">
+                      Statistics
+                    </router-link>
+                  </b-dropdown-item>
+                  <b-dropdown-item @click="handleDeleteBroadcast(data.item.id)">
+                    Delete
+                  </b-dropdown-item>
+                </b-dropdown>
+              </template>
+            </b-table>
+          </div>
+      
+          <!-- Pagination buttons and info -->
+          <div class="pagination-container">
+            <span class="grey-text" style="margin-top: 20px">Page {{ currentPage }} of {{ totalPages }}</span>
+            <input type="number" min="5" @change="updatePageSize" style="width: 50px; height: 30px; margin-top: 10px">
+            <button class="paginate-buttons" @click="previousPage" :disabled="currentPage === 1">Prev</button>
+            <button v-for="page in totalPages" :key="page" class="paginate-buttons" :class="{ 'active-page': page === currentPage }" @click="goToPage(page)">{{ page }}</button>
+            <button class="paginate-buttons" @click="nextPage" :disabled="currentPage === totalPages">Next</button>
+          </div>
+      
+          <!-- Add Broadcast Modal Structure -->
+          <b-modal id="modal-addBroadcastModal" title="Add Broadcast" size="lg">
+            <AddBroadcastForm ref="addBroadcastForm" @broadcast-saved="handleBroadcastSaved" />
+      
+            <template #modal-footer="{cancel}">
+              <b-button size="sm" variant="danger" @click="cancel()">
+                Cancel
+              </b-button>
+              <b-button size="sm" variant="success" @click="saveBroadcast">
+                Save
+              </b-button>
+            </template>
+          </b-modal>
+      
+          <!-- Edit Broadcast Modal Structure -->
+          <b-modal id="modal-editBroadcastModal" title="Edit Broadcast">
+            <EditBroadcastForm ref="editBroadcastForm" :broadcast="selectedBroadcast" @broadcast-updated="handleBroadcastUpdated" />
+      
+            <template #modal-footer="{cancel}">
+              <b-button size="sm" variant="danger" @click="cancel()">
+                Cancel
+              </b-button>
+              <b-button size="sm" variant="success" @click="saveEditBroadcast">
+                Save
+              </b-button>
+            </template>
+          </b-modal>
         </div>
       </div>
     </div>
-
-    <div>
-      <b-table striped hover :items="paginatedBroadcasts" :fields="fields" responsive>
-        <!-- Checkbox column -->
-        <template #cell(check)="data">
-          <input type="checkbox" v-model="selectedBroadcasts" :value="data.item.id" />
-        </template>
-
-        <!-- Broadcast Name column -->
-        <template #cell(broadcast-name)="data">
-          {{ data.item.name }}
-        </template>
-
-        <!-- Channel column -->
-        <template #cell(channel)="data">
-          {{ data.item.channel }}
-        </template>
-
-        <!-- Recipients column -->
-        <template #cell(recipients)="data">
-          <div class="recipient-container">
-              <div class="recipient1"></div>
-              <div class="recipient2"></div>
-              <div class="recipient3">{{ data.item.recipients.length }}</div>
-          </div>
-          
-          
-        </template>
-
-        <!-- Status column -->
-        <template #cell(status)="data">
-          {{ data.item.status }}
-        </template>
-
-        <!-- Sent Date column -->
-        <template #cell(sent-date)="data">
-          {{ data.item.sent_date }}
-        </template>
-
-        <!-- Dropdown column -->
-        <template #cell(dropdown)="data">
-          <b-dropdown size="lg" variant="link" toggle-class="text-decoration-none" no-caret>
-            <template #button-content>
-              <b-icon icon="three-dots-vertical"></b-icon>
-            </template>
-            <b-dropdown-item v-b-modal.modal-editBroadcastModal @click="handleSetSelectedBroadcast(data.item)">
-              Edit
-            </b-dropdown-item>
-            <b-dropdown-item @click="handleDeleteBroadcast(data.item.id)">
-              Delete
-            </b-dropdown-item>
-          </b-dropdown>
-        </template>
-      </b-table>
-    </div>
-
-    <!-- Pagination buttons and info -->
-    <div class="pagination-container">
-      <span class="grey-text" style="margin-top: 20px">Page {{ currentPage }} of {{ totalPages }}</span>
-      <input type="number" min="5" @change="updatePageSize" style="width: 50px; height: 30px; margin-top: 10px">
-      <button class="paginate-buttons" @click="previousPage" :disabled="currentPage === 1">Prev</button>
-      <button v-for="page in totalPages" :key="page" class="paginate-buttons" :class="{ 'active-page': page === currentPage }" @click="goToPage(page)">{{ page }}</button>
-      <button class="paginate-buttons" @click="nextPage" :disabled="currentPage === totalPages">Next</button>
-    </div>
-
-    <!-- Add Broadcast Modal Structure -->
-    <b-modal id="modal-addBroadcastModal" title="Add Broadcast" size="lg">
-      <AddBroadcastForm ref="addBroadcastForm" @broadcast-saved="handleBroadcastSaved" />
-
-      <template #modal-footer="{cancel}">
-        <b-button size="sm" variant="danger" @click="cancel()">
-          Cancel
-        </b-button>
-        <b-button size="sm" variant="success" @click="saveBroadcast">
-          Save
-        </b-button>
-      </template>
-    </b-modal>
-
-    <!-- Edit Broadcast Modal Structure -->
-    <b-modal id="modal-editBroadcastModal" title="Edit Broadcast">
-      <EditBroadcastForm ref="editBroadcastForm" :broadcast="selectedBroadcast" @broadcast-updated="handleBroadcastUpdated" />
-
-      <template #modal-footer="{cancel}">
-        <b-button size="sm" variant="danger" @click="cancel()">
-          Cancel
-        </b-button>
-        <b-button size="sm" variant="success" @click="saveEditBroadcast">
-          Save
-        </b-button>
-      </template>
-    </b-modal>
   </div>
+  
 </template>
 
 <script>
@@ -211,13 +232,13 @@ export default {
       this.currentPage = 1;
     },
     saveBroadcast() {
-      this.$refs.addBroadcastForm.saveBroadcast()
-        .then(() => {
-          this.$bvModal.hide('modal-addBroadcastModal');
-        })
-        .catch(error => {
-          console.error('Error saving broadcast:', error);
-        });
+      this.$refs.addBroadcastForm.saveCreateBroadcast()
+        // .then(() => {
+        //   this.$bvModal.hide('modal-addBroadcastModal');
+        // })
+        // .catch(error => {
+        //   console.error('Error saving broadcast:', error);
+        // });
     },
     saveEditBroadcast() {
       this.$refs.editBroadcastForm.saveBroadcast()
@@ -365,9 +386,7 @@ export default {
 .broadcasts-table-container {
   font-size: .8rem;
   background-color: white;
-  width: 90%;
-  margin: 20px auto;
-  padding: 30px;
+  padding: 20px
 }
 .pagination-container {
   display: flex;

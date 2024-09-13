@@ -4,7 +4,7 @@
       <!-- Row 1 -->
       <div class="row avaliabilty">
         <div class="col-md-6 d-flex align-items-center justify-content-left">
-          <div class="circle-text">A</div>
+          <div class="circle-text"><b>{{ selectedContact.name[0] }}</b></div>
           <div class="status-circle"></div>
           <div class="status-label">Available</div>
         </div>
@@ -16,7 +16,8 @@
       <!-- Basic Information and Contact custom parameters -->
       <div class="row">
         <div class="col-md-12 basic-info">
-          <b>Basic Information</b>
+          <b>Basic Information</b> <br>
+        {{ selectedContact.name }}
         </div>
       </div>
 
@@ -25,26 +26,13 @@
           <b>Contact custom parameters</b>
           <b-button variant="success" class="icon-button light-text" size="sm"><b-icon icon="pen" variant="light"></b-icon></b-button>
         </div>
-
         <div class="col-md-12 parameter-items">
-          <div class="parameter-item">
+          <div class="parameter-item" v-for="(attribute, index) in customAttributes" :key="index">
             <b-list-group horizontal>
-              <b-list-group-item class="d-flex align-items-center">language</b-list-group-item>
+              <b-list-group-item class="d-flex align-items-center">{{ attribute.custom_attribute.name }}</b-list-group-item>
               <b-list-group-item class="d-flex justify-content-between align-items-center">
-                en
-                <!-- <b-button variant="outline-secondary" size="sm" style="margin-left: 20px;">x</b-button> -->
-                <span class="parameter-item-close-btn">x</span>
-              </b-list-group-item>
-            </b-list-group>
-          </div>
-
-          <div class="parameter-item">
-            <b-list-group horizontal>
-              <b-list-group-item class="d-flex align-items-center">name</b-list-group-item>
-              <b-list-group-item class="d-flex justify-content-between align-items-center">
-                Olagoke Mubarak
-                <!-- <b-button variant="outline-secondary" size="sm" style="margin-left: 20px;">x</b-button> -->
-                <span class="parameter-item-close-btn">x</span>
+                {{ attribute.value }}
+                <span class="parameter-item-close-btn" @click="removeCustomAttribute(index)">x</span>
               </b-list-group-item>
             </b-list-group>
           </div>
@@ -52,7 +40,6 @@
 
         <div class="col-md-12 tags">
           <div class="tags-header">Tags</div>
-          <!-- <CustomTags/> -->
           <div>
             <custom-tags @tag-added="addTag" @tag-removed="removeTag"></custom-tags>
           </div>
@@ -63,63 +50,105 @@
 </template>
 
 <script>
-import CustomTags from '@/components/ui/CustomTags.vue'
+import axios from 'axios';
+import CustomTags from '@/components/ui/CustomTags.vue';
+import { mapState, mapMutations } from 'vuex';
+
 export default {
+  data() {
+    return {
+      customAttributes: [],
+      tags: [],
+      chatMessages: [],
+    };
+  },
+  computed: {
+    ...mapState(['selectedContact']),
+  },
+  watch: {
+    selectedContact(newContact) {
+      if (newContact && newContact.attributes) {
+        this.customAttributes = newContact.attributes;
+      } else {
+        this.customAttributes = [];
+      }
+    },
+  },
   methods: {
+    ...mapMutations(['setSelectedContact']), // Assuming you have a mutation to set the selected contact
     addTag(tag) {
       this.tags.push(tag); // Add tag to the tags array
     },
     removeTag(index) {
       this.tags.splice(index, 1); // Remove tag from the tags array
     },
+    removeCustomAttribute(index) {
+      this.customAttributes.splice(index, 1); // Remove custom attribute from the array
+    },
+    async loadMessages(chatId) {
+      this.chatMessages = [];
+      try {
+        const response = await axios.get(`http://localhost:8000/api/conversations/${chatId}`);
+        this.chatMessages = response.data;
+        if (this.chatMessages.contact) {
+          this.setSelectedContact(this.chatMessages.contact);
+        }
+      } catch (error) {
+        console.error('Failed to fetch chat messages:', error);
+      }
+    },
   },
-  mounted() {},
-  components:{
-    CustomTags
-  }
+  components: {
+    CustomTags,
+  },
+  mounted() {
+    let chatId = this.$route.params.id;
+    this.loadMessages(chatId);
+  },
 };
 </script>
 
 <style scoped>
-.tags{
+.tags {
   margin-top: 20px;
+  margin-bottom: 20px;
 }
-.tags-header{
+.tags-header {
   font-weight: bold;
-  padding-bottom: 15px
+  padding-bottom: 15px;
 }
-.justify-content-between{
-  width: 100%
+.justify-content-between {
+  width: 100%;
 }
-.parameter-item-close-btn{
+.parameter-item-close-btn {
   margin-left: 20px;
   border: 1.5px solid gray;
   border-radius: 4px;
   padding: 0px 5px;
   cursor: pointer;
-  transition: all .1s ease-in;
+  transition: all 0.1s ease-in;
 }
-.parameter-item-close-btn:hover{
+.parameter-item-close-btn:hover {
   background-color: rgb(197, 195, 195);
 }
-.parameter-items{
+.parameter-items {
   margin-top: 20px;
   padding-bottom: 20px;
   border-bottom: 1px rgb(231, 231, 231) solid;
 }
 
-.parameter-item{
+.parameter-item {
   margin-top: 5px;
 }
-.custom-paramters{
-  padding-top: 15px
+.custom-paramters {
+  padding-top: 15px;
 }
-.basic-info{
+.basic-info {
   margin-top: 15px;
   padding-bottom: 40px;
   border-bottom: 1px rgb(231, 231, 231) solid;
 }
-.avaliabilty{
+.avaliabilty {
   border-bottom: 1px rgb(231, 231, 231) solid;
   padding-bottom: 25px;
 }

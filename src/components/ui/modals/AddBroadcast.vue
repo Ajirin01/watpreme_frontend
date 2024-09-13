@@ -21,11 +21,13 @@
       <div class="form-group mt-3">
         <label for="templateId">Template:</label>
         <div class="d-flex align-items-center">
-          <h6 class="mb-0"> {{ broadcastSelectedTemplate.template?.name }}</h6>
+          <h6 class="mb-0">{{ broadcastSelectedTemplate.template?.name }}</h6>
           <span class="ml-2">
             <b-icon-pen-fill @click="openTemplateModal"></b-icon-pen-fill>
           </span>
         </div>
+
+        <div v-if="newBroadcast.channel === 'SMS' || newBroadcast.channel === 'Email'" v-html="broadcastSelectedTemplate.template?.components[0]?.text"></div>
       </div>
     </b-card>
 
@@ -33,7 +35,7 @@
     <b-card class="mb-4" header="Recipients">
       <div class="form-group">
         <label for="recipients">Recipients:</label>
-        <span class="ml-2"><b-icon-pen-fill v-b-modal.modal-createmessageTemplateModel></b-icon-pen-fill></span>
+        <span class="ml-2"><b-icon-pen-fill v-b-modal.modal-manageRecipientsModal></b-icon-pen-fill></span>
       </div>
       
       <b-card title="Manage Recipients" class="mt-3">
@@ -50,14 +52,14 @@
                   </label>
                 </th>
                 <th><b>Name</b></th>
-                <th><b>Phone</b></th>
+                <th><b>{{ newBroadcast.channel === 'Email' ? 'Email' : 'Phone' }}</b></th>
                 <th><b>Attributes</b></th>
                 <th></th>
               </tr>
             </thead>
             <!-- Table body -->
             <tbody>
-              <tr v-for="recipient in broadcastRecipients" :key="recipient.id">
+              <tr v-for="recipient in filteredRecipients" :key="recipient.id">
                 <!-- Table row data -->
                 <td>
                   <label>
@@ -69,7 +71,7 @@
                   <span class="username grey-text text-darken-3"><b>{{ recipient.name }}</b></span>
                 </td>
                 <td>
-                  <span class="email grey-text text-darken-3">{{ recipient.phone }}</span>
+                  <span class="contact grey-text text-darken-3">{{ newBroadcast.channel === 'Email' ? recipient.email : recipient.phone }}</span>
                 </td>
                 <td>
                   <div class="attributes-list">
@@ -148,7 +150,15 @@
 
         <div>
           <label>Compose Email:</label>
-          <quill-editor v-model="newBroadcast.emailContent" :options="editorOptions"></quill-editor>
+          <quill-editor ref="emailEditor" v-model="newBroadcast.emailContent" :options="editorOptions"></quill-editor>
+        </div>
+
+        <div>
+          <label>Insert Variable:</label>
+          <select @change="insertVariable" class="form-control mb-3">
+            <option disabled selected>Select variable</option>
+            <option v-for="variable in customAttributes" :key="variable.id" :value="variable.name">{{ variable.name }}</option>
+          </select>
         </div>
       </template>
       
@@ -161,26 +171,44 @@
         </b-button>
       </template>
     </b-modal>
+
+    <!-- Recipients Management Modal -->
+    <b-modal id="modal-manageRecipientsModal" title="Add Recipients" size="lg">
+      <CreateBroadcastRecipients ref="createBroadcastRecipients" />
+
+      <template #modal-footer="{ cancel }">
+        <b-button size="sm" variant="danger" @click="cancel()">
+          Cancel
+        </b-button>
+        <b-button size="sm" variant="success" @click="saveRecipients">
+          Save
+        </b-button>
+      </template>
+    </b-modal>
   </div>
 </template>
 
 <script>
 import { mapActions, mapState } from 'vuex';
 import SelectTemplateModal from '@/components/ui/modals/SelectTemplateModal.vue';
+import CreateBroadcastRecipients from '@/components/ui/modals/CreateBroadcastRecipients.vue';
+import { addDbPrefix } from '@/utils/AttributePrefixHandles'
+import transformTemplateToWhatsAppPayload from '@/utils/transformTemplateToWhatsAppPayload'
 import { quillEditor } from 'vue-quill-editor';
 import 'quill/dist/quill.snow.css';
 
 export default {
   components: {
     quillEditor,
-    SelectTemplateModal
+    SelectTemplateModal,
+    CreateBroadcastRecipients
   },
   data() {
     return {
       newBroadcast: {
         name: '',
-        business_id: '',
-        template_id: '',
+        business_id: 1,
+        template: '',
         channel: '',
         status: '',
         recipients: [],
@@ -196,16 +224,17 @@ export default {
       selectedContacts: [],
       editorOptions: {
         theme: 'snow'
-      }
+      },
+      variables: ['name', 'product', 'date'] // Add more variables as needed
     };
   },
   methods: {
-    ...mapActions(['postBroadcast', 'setmessageTemplate', 'deletemessageTemplate', 'setBroadcastSelectedTemplate']),
+    ...mapActions(['fetchContacts' ,'postBroadcast', 'setmessageTemplate', 'deleteBroadcastRecipients', 'setBroadcastSelectedTemplate', 'setCustomAttributes']),
     clearForm() {
       this.newBroadcast = {
         name: '',
         business_id: '',
-        template_id: '',
+        template: '',
         channel: '',
         recipients: [],
         is_scheduled: false,
@@ -217,14 +246,32 @@ export default {
       this.selectedContacts = [];
     },
     saveCreateBroadcast() {
-      console.log(this.newBroadcast);
+      this.newBroadcast.recipients = this.selectedContacts.map(contact => {
+        if (this.newBroadcast.channel === 'Email') {
+          return contact.email;
+        } else {
+          return contact.phone;
+        }
+      });
+
+      if(this.newBroadcast.channel === 'WhatsApp'){
+        // this.newBroadcast.template = this.broadcastSelectedTemplate
+        this.newBroadcast.template = transformTemplateToWhatsAppPayload(this.broadcastSelectedTemplate)
+      }else{
+        this.newBroadcast.template = this.broadcastSelectedTemplate
+      }
+
+      // console.log(this.newBroadcast);
+
+      console.log(this.newBroadcast.recipients)
+
+      // const whatsappPayload = transformTemplateToWhatsAppPayload(this.newBroadcast.template)
   
-      this.newBroadcast.recipients = this.selectedContacts.map(contact => contact.phone);
-  
+      // console.log(this.newBroadcast);
       this.postBroadcast(this.newBroadcast)
         .then(() => {
           alert("Broadcast created successfully");
-          this.clearForm();
+          // this.clearForm();
         })
         .catch(error => {
           console.error("Failed to create broadcast", error);
@@ -237,13 +284,13 @@ export default {
       }else{
         const content = this.newBroadcast.channel === "SMS" ? this.newBroadcast.smsContent : this.newBroadcast.emailContent;
         const subject = this.newBroadcast.channel === "SMS" ? this.newBroadcast.smsSubject : this.newBroadcast.emailSubject;
-        console.log({template: {name: subject, components:  [{type: 'body', text: content}]}})
-        this.setBroadcastSelectedTemplate({template: {name: subject, components: [{type: 'body', text: content}]}})
+        console.log({template: {name: subject, components:  [{type: 'BODY', text: content}]}})
+        this.setBroadcastSelectedTemplate({template: {name: subject, components: [{type: 'BODY', text: content}]}})
       }
     },
     removeSelectedRecipient() {
       const updatedRecipients = this.broadcastRecipients.filter(recipient => !this.selectedContacts.some(selected => selected.id === recipient.id));
-      this.deletemessageTemplate(updatedRecipients);
+      this.deleteBroadcastRecipients(updatedRecipients);
 
       this.selectedContacts = [];
       this.selectAll = false;
@@ -259,10 +306,40 @@ export default {
     },
     openTemplateModal() {
       this.$bvModal.show('modal-selectTemplateModel');
-    }
+    },
+    insertVariable(event) {
+      const variable = event.target.value;
+      const editor = this.$refs.emailEditor.quill;
+      const cursorPosition = editor.getSelection()?.index;
+      if(cursorPosition){
+        editor.insertText(cursorPosition, `${addDbPrefix(variable)}`);
+        editor.setSelection(cursorPosition + variable.length + 4);
+        event.target.value = ''; // Reset the dropdown
+      }
+      
+    },
+    saveRecipients(){
+      this.$refs.createBroadcastRecipients.save()
+    },
+
+
+    
+  },
+  mounted() {
+    this.fetchContacts()
+    this.setCustomAttributes()
   },
   computed: {
-    ...mapState(['broadcastRecipients', 'broadcastSelectedTemplate']),
+    ...mapState(['broadcastRecipients', 'broadcastSelectedTemplate', 'customAttributes']),
+    filteredRecipients() {
+      return this.broadcastRecipients.filter(recipient => {
+        if (this.newBroadcast.channel === 'Email') {
+          return recipient.email;
+        } else {
+          return recipient.phone;
+        }
+      });
+    },
     calculatedmessageTemplate() {
       if (Array.isArray(this.broadcastRecipients)) {
         return this.broadcastRecipients;

@@ -40,8 +40,6 @@ export default {
 
       this.updateTeam(this.team)
 
-      // Clear form fields after submission
-      this.clearForm();
     },
     clearForm() {
       // Reset all form fields to default values

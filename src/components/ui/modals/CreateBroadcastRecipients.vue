@@ -63,7 +63,7 @@
           <div class="user-info">
             <div class="details">
               <span class="username grey-text text-darken-3"><b>{{ data.item.name }}</b></span>
-              <span class="email grey-text text-darken-3">{{ data.item.phone }}</span>
+              <span class="email grey-text text-darken-3">{{ data.item.phone || data.item.email }}</span>
             </div>
           </div>
         </template>
@@ -142,7 +142,7 @@ export default {
       // Extract unique attribute names from contacts
       const attributes = this.contacts.reduce((acc, contact) => {
         acc[0] = ""
-        contact.attributes.forEach(attr => {
+        contact.attributes?.forEach(attr => {
           if (!acc.includes(attr.custom_attribute.name)) {
             acc.push(attr.custom_attribute.name);
           }
@@ -152,7 +152,9 @@ export default {
       return attributes.map(attr => ({ value: attr, text: attr }));
     },
     // Filtered contacts based on search query and attribute filter
+    // Ensure `contacts` is properly loaded before applying filters
     filteredContacts() {
+      if (!this.contacts) return [];
       const query = this.searchQuery.toLowerCase();
       const attribute = this.selectedAttribute.toLowerCase();
       const attributeValue = this.attributeFilterValue.toLowerCase();
@@ -163,14 +165,14 @@ export default {
           (contact.phone && contact.phone.toLowerCase().includes(query));
         
         // Check if any attribute matches the query or selected attribute filter
-        const attributesMatch = contact.attributes.some(attribute => 
+        const attributesMatch = contact.attributes?.some(attribute => 
           (attribute.value && attribute.value.toLowerCase().includes(query)) ||
           (attribute.custom_attribute.name && attribute.custom_attribute.name.toLowerCase().includes(query))
         );
 
         // If an attribute filter is selected, ensure the contact matches the attribute filter
         const attributeFilterMatch = attribute 
-          ? contact.attributes.some(attr => 
+          ? contact.attributes?.some(attr => 
               attr.custom_attribute.name.toLowerCase() === attribute &&
               attr.value.toLowerCase().includes(attributeValue)
             )
@@ -191,7 +193,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions(['fetchContacts', 'setCustomAttributes', 'updateContact', 'deleteContact', 'deleteContactAttribute', 'postContact', 'setSelectedContact', 'setBroadcastRecipients']),
+    ...mapActions(['setCustomAttributes', 'updateContact', 'deleteContact', 'deleteContactAttribute', 'postContact', 'setSelectedContact', 'setBroadcastRecipients']),
     isTruthy(value) {
       // Convert the value to a boolean and return it
       return Boolean(Number(value));
@@ -289,6 +291,10 @@ export default {
         // Assign values to corresponding headers
         for (let j = 0; j < headers.length; j++) {
           contact[headers[j]] = values[j];
+          // console.log("@@@@@", headers[j])
+          // if(contact[headers[j]] === "email"){
+          //   console.log(values[j])
+          // }
         }
 
         // Parse the attributes field back to an object
@@ -298,11 +304,13 @@ export default {
         }
 
         // Add contact to contacts array
+        // console.log(contact)
         contacts.push(contact);
       }
-
+      // console.log(contacts)
       return contacts;
     },
+
     importContacts(event) {
       const file = event.target.files[0]; // Get the uploaded file
       const reader = new FileReader();
@@ -312,25 +320,31 @@ export default {
         const csvData = e.target.result; // Get the CSV data
         const contacts = this.parseCSV(csvData); // Parse the CSV data
 
+        console.log(contacts)
+
         // Add the parsed contacts to filteredContacts reactively
         this.contacts.push(...contacts);
-        console.log(this.contacts);
+        // console.log(this.contacts);
       };
 
       // Read the uploaded file as text
       reader.readAsText(file);
     },
-    markAlreadySelectedContacts(){
+    markAlreadySelectedContacts() {
+      console.log('Broadcast Recipients:', this.broadcastRecipients);
+      console.log('Filtered Contacts:', this.filteredContacts);
       const selectedRecipients = this.broadcastRecipients.map(selectedContact => {
         return this.filteredContacts.find(contact => contact.id === selectedContact.id);
       });
+
+      console.log('Selected Recipients:', selectedRecipients);
       this.selectedContacts = selectedRecipients.map(contact => contact.id);
-      console.log(this.selectedContacts);
+      // console.log('Selected Contacts IDs:', this.selectedContacts);
     }
   },
   mounted() {
     console.log(this.broadcastRecipients)
-    this.fetchContacts()
+    // this.fetchContacts()
     this.setCustomAttributes()
     this.markAlreadySelectedContacts()
   }
